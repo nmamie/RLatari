@@ -63,7 +63,7 @@ class DQN(nn.Module):
         # Calculate the current epsilon
         eps_curr = self.eps_end + (self.eps_start - self.eps_end) * (1 - min(1.0, self.steps_annealed / self.anneal_length))
         self.steps_annealed += 1
-        
+
         # Disable epsilon-greedy for inference
         if exploit or random.random() > eps_curr:
             # Assume self(observation) returns a [batch_size, n_actions] tensor
@@ -87,38 +87,41 @@ def optimize(dqn, target_dqn, memory, optimizer):
     # Remember to move them to GPU if it is available, e.g., by using Tensor.to(device).
     # Note that special care is needed for terminal transitions!
     sample = memory.sample(dqn.batch_size)
-    
+
     # handle terminal transitions (none)
-    obs = torch.cat([s for s in sample[0] if s is not None], dim=0).to(device)
-    action = torch.cat(sample[1], dim=0).to(device)
-    next_obs = torch.cat([s for s in sample[2] if s is not None], dim=0).to(device)
-    reward = torch.cat(sample[3], dim=0).to(device)
-    
-    mask = torch.tensor([s is not None for s in sample[2]], device=device, dtype=torch.bool)
+    obs = torch.cat([s for s in sample[0]], dim=0).to(device)
+    actions = torch.cat(sample[1], dim=0).to(device)
+    next_obs = torch.cat([s if s is not None else torch.tensor([[0,0,0,0]]) for s in sample[2]], dim=0).to(device)
+    rewards = torch.cat(sample[3], dim=0).to(device)
+
+    non_terminal_mask = torch.tensor([s is not None for s in sample[2]], device=device, dtype=torch.bool)
+    terminal_mask = torch.tensor([s is None for s in sample[2]], device=device, dtype=torch.bool)
+
 
     # Compute the current estimates of the Q-values for each state-action
     # pair (s,a). Here, torch.gather() is useful for selecting the Q-values
     # corresponding to the chosen actions.
     q_values = dqn(obs)
-    q_values = torch.gather(q_values, 1, action)
-    
+    q_values = torch.gather(q_values, 1, actions)
+
     # Compute the Q-value targets. Only do this for non-terminal transitions!
-    with torch.no_grad():
-        target_q_values = torch.zeros(dqn.batch_size, device=device)
-        target_q_values[mask] = reward[mask] + dqn.gamma * target_dqn(next_obs).max(1).values
-        target_q_values = target_q_values.detach()
-        
-    # Compute the loss using the Huber loss function
-    loss = F.smooth_l1_loss(q_values, target_q_values.unsqueeze(1))
-    
+    target_q_values = torch.zeros(dqn.batch_size, device=device)
+    target_q_values[non_terminal_mask] = rewards[non_terminal_mask] + target_dqn.gamma * target_dqn(next_obs[non_terminal_mask]).max(1).values
+    target_q_values[terminal_mask] = rewards[terminal_mask]
+    target_q_values = target_q_values.detach()
+    # import pdb; pdb.set_trace()
+
+    # Compute the loss using the mse loss function
+    loss = F.mse_loss(q_values, target_q_values.unsqueeze(1))
+
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
-    
-    # Clip the gradients to avoid exploding gradients
-    for param in dqn.parameters():
-        param.grad.data.clamp_(-1, 1)
-        
+
+    # # Clip the gradients to avoid exploding gradients
+    # for param in dqn.parameters():
+    #     param.grad.data.clamp_(-1, 1)
+
     optimizer.step()
-    
-    return loss.item()    
+
+    return loss.item()
