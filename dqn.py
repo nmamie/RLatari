@@ -32,6 +32,9 @@ class ReplayMemory:
 
 
 class DQN(nn.Module):
+
+    # TODO create a convnet for using image input (2*600*400)
+    
     def __init__(self, env_config):
         super(DQN, self).__init__()
 

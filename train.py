@@ -5,7 +5,7 @@ import torch
 from tqdm import tqdm
 
 import config
-from utils import preprocess
+from utils import preprocess, grayscale
 from evaluate import evaluate_policy
 from dqn import DQN, ReplayMemory, optimize
 
@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', choices=['CartPole-v1', 'MountainCar-v0', 'Pong-v5'], default='CartPole-v1')
 parser.add_argument('--evaluate_freq', type=int, default=25, help='How often to run evaluation.', nargs='?')
 parser.add_argument('--evaluation_episodes', type=int, default=5, help='Number of evaluation episodes.', nargs='?')
+parser.add_argument('--using_screen', type=bool, default=False, help='Are we using the screen as observation vector ?.', nargs='?')
 
 # Hyperparameter configurations for different environments. See config.py.
 ENV_CONFIGS = {
@@ -71,6 +72,12 @@ if __name__ == '__main__':
         obs, info = env.reset()
 
         obs = preprocess(obs, env=args.env).unsqueeze(0)
+
+        if args.using_screen:
+            previous_screen = grayscale(env.render())
+            current_screen = grayscale(env.render())
+
+            obs = np.block([previous_screen, current_screen]).ravel()
         
         # initialize steps
         steps = 0
@@ -88,6 +95,13 @@ if __name__ == '__main__':
             # Preprocess incoming observation.
             if not terminated:
                 next_obs = preprocess(next_obs, env=args.env).unsqueeze(0)
+
+                if args.using_screen:
+                    previous_screen = current_screen
+                    current_screen = grayscale(env.render())
+
+                    next_obs = np.block([previous_screen, current_screen]).ravel()
+
             else:
                 next_obs = None
                 
