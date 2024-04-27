@@ -9,6 +9,9 @@ from utils import preprocess
 from evaluate import evaluate_policy
 from dqn import DQN, ReplayMemory, optimize
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
@@ -22,6 +25,19 @@ ENV_CONFIGS = {
     'MountainCar-v0': config.MountainCar,
     'Pong-v5': config.AtariPong,
 }
+
+def plot_learning(mean_perf, max_perf):
+    eval_epochs = len(mean_perf)
+    epochs = (np.arange(eval_epochs) * args.evaluate_freq)+1
+
+    plt.plot(epochs, mean_perf, label="Mean returns")
+    plt.plot(epochs, max_perf, label ="Max returns")
+
+    plt.title("Performance over epochs")
+    plt.xlabel("Epoch")
+    plt.ylabel("Return")
+    plt.legend()
+    plt.show()
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -45,6 +61,10 @@ if __name__ == '__main__':
 
     # Keep track of best evaluation mean return achieved so far.
     best_mean_return = -float("Inf")
+
+    # Keep track of performances.
+    mean_performances = np.empty(env_config['n_episodes'] // args.evaluate_freq)
+    max_performances = np.empty(env_config['n_episodes'] // args.evaluate_freq)
 
     for episode in tqdm(range(env_config['n_episodes'])):
         terminated = False
@@ -87,8 +107,11 @@ if __name__ == '__main__':
             
         # Evaluate the current agent.
         if episode % args.evaluate_freq == 0:
-            mean_return = evaluate_policy(dqn, env, env_config, args, n_episodes=args.evaluation_episodes)
+            mean_return, max_return = evaluate_policy(dqn, env, env_config, args, n_episodes=args.evaluation_episodes)
             print(f'Episode {episode+1}/{env_config["n_episodes"]}: {mean_return}')
+
+            mean_performances[episode // args.evaluate_freq] = mean_return
+            max_performances[episode // args.evaluate_freq] = max_return
 
             # Save current agent if it has the best performance so far.
             if mean_return >= best_mean_return:
@@ -99,3 +122,4 @@ if __name__ == '__main__':
         
     # Close environment after training is completed.
     env.close()
+    plot_learning(mean_performances, max_performances)

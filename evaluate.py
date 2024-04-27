@@ -26,6 +26,9 @@ ENV_CONFIGS = {
 def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbose=False):
     """Runs {n_episodes} episodes to evaluate current policy."""
     total_return = 0
+
+    returns = [0] * n_episodes
+
     for i in range(n_episodes):
         obs, info = env.reset()
         obs = preprocess(obs, env=args.env).unsqueeze(0)
@@ -44,12 +47,13 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
             episode_return += reward
         
         total_return += episode_return
+        returns[i] = episode_return
         
         if verbose:
             print(f'Finished episode {i+1} with a total return of {episode_return}')
 
     
-    return total_return / n_episodes
+    return total_return / n_episodes, max(returns)
 
 if __name__ == '__main__':
     args = parser.parse_args()
