@@ -45,10 +45,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Initialize environment and config.
-    env = gym.make(args.env)
     if args.env == 'Pong-v5':
+        env = gym.make('ALE/Pong-v5')
         env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30)
         env = gym.wrappers.FrameStack(env, num_stack=4)
+    else:
+        env = gym.make(args.env)
     env_config = ENV_CONFIGS[args.env]
 
     # Initialize deep Q-networks.
