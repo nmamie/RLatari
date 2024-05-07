@@ -1,6 +1,6 @@
-numpy
-matplotlib
-torch
-gymnasium
-gymnasium[atari]
-gymnasium[accept-rom-license]
+gymnasium==0.29.1
+matplotlib==3.8.3
+numpy==1.26.4
+torch==2.2.1
+tqdm==4.65.0
+tqdm==4.66.2
