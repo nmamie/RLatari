@@ -81,7 +81,9 @@ if __name__ == '__main__':
     mean_performances = np.empty(env_config['n_episodes'] // args.evaluate_freq)
     max_performances = np.empty(env_config['n_episodes'] // args.evaluate_freq)
 
-    for episode in tqdm(range(env_config['n_episodes'])):
+    progress_bar = tqdm(range(env_config['n_episodes']), desc='Training')
+    for episode in range(env_config['n_episodes']):
+        losses = []
         terminated = False
         obs, info = env.reset()
 
@@ -92,19 +94,23 @@ if __name__ == '__main__':
             # current_screen = grayscale(env.render())
 
             # obs = np.block([previous_screen, current_screen]).ravel()
-            obs_stack = torch.cat(args['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
+            obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
 
         # initialize steps
         steps = 0
 
         while not terminated:
             # get action from dqn
-            action = dqn.act(obs, exploit=False)
-            # map action to avaiable options (2 and 3)
-            action_mapped = torch.tensor([[2 + action.item()]], device = device, dtype=torch.long)
-
-            # Act in the true environment.
-            next_obs, reward, terminated, truncated, info = env.step(action_mapped.item())
+            if args.using_screen:
+                action = dqn.act(obs_stack, exploit=False)
+                # map action to avaiable options (2 and 3)
+                action_mapped = torch.tensor([[2 + action.item()]], device = device, dtype=torch.long)
+                # Act in the true environment.
+                next_obs, reward, terminated, truncated, info = env.step(action_mapped.item())
+            else:
+                action = dqn.act(obs, exploit=False)
+                # Act in the true environment.
+                next_obs, reward, terminated, truncated, info = env.step(action.item())
 
             # step counter
             steps += 1
@@ -133,11 +139,17 @@ if __name__ == '__main__':
 
             # Optimize the DQN.
             if steps % env_config['train_frequency'] == 0:
-                optimize(dqn, target_dqn, memory, optimizer)
+                loss = optimize(dqn, target_dqn, memory, optimizer)
+                if loss != None:
+                    losses.append(loss)
 
             # Update target network.
             if steps % env_config['target_update_frequency'] == 0:
                 target_dqn.load_state_dict(dqn.state_dict())
+
+        # update progress
+        progress_bar.set_postfix({'loss': np.average(losses)})
+        progress_bar.update()
 
         # Evaluate the current agent.
         if episode % args.evaluate_freq == 0:

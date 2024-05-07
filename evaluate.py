@@ -35,6 +35,9 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
         obs, info = env.reset()
         obs = preprocess(obs, env=args.env).unsqueeze(0)
 
+        if args.env == 'Pong-v5':
+            obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0)
+
         terminated = False
         episode_return = 0
 
@@ -42,19 +45,26 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
             if render:
                 env.render()
 
-            action = dqn.act(obs, exploit=True).item()
-            obs, reward, terminated, truncated, info = env.step(action)
+            if args.env == 'Pong-v5':
+                action = dqn.act(obs_stack, exploit=True)
+                action_mapped = torch.tensor([[2 + action.item()]], dtype = torch.long)
+                obs, reward, terminated, truncated, info = env.step(action_mapped.item())
+            else:
+                action = dqn.act(obs, exploit=True).item()
+                obs, reward, terminated, truncated, info = env.step(action)
             obs = preprocess(obs, env=args.env).unsqueeze(0)
+            if args.env == 'Pong-v5':
+                obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0)
 
             episode_return += reward
-        
+
         total_return += episode_return
         returns[i] = episode_return
-        
+
         if verbose:
             print(f'Finished episode {i+1} with a total return of {episode_return}')
 
-    
+
     return total_return / n_episodes, max(returns)
 
 if __name__ == '__main__':

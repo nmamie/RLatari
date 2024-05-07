@@ -92,20 +92,27 @@ class ConvDQN(nn.Module):
         self.anneal_length = env_config["anneal_length"]
         self.n_actions = env_config["n_actions"]
 
+        # Define the convolutional layers
         self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4, padding=0)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
-        self.fc1 = nn.Linear(3136, 512)
-        self.fc2 = nn.Linear(512, 2) # although in pong there are 6 possible actions only action 2 and 3 are sensible
+        # Define the fully connected layers
+        self.fc1 = nn.Linear(3136, 512)  # Ensure this dimension matches the flattened output of conv3
+        self.fc2 = nn.Linear(512, 2)  # Output layer for two actions
 
+        # Activation and flattening helpers
         self.relu = nn.ReLU()
         self.flatten = nn.Flatten()
 
     def forward(self, x):
-        """Runs the forward pass of the ConvNet."""
+        # Pass the data through the convolutional layers
+        if len(x.shape) > 4:
+            x = x.mean(dim=2)
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
+
+        # Flatten and pass through fully connected layers
         x = self.flatten(x)
         x = self.relu(self.fc1(x))
         x = self.fc2(x)
@@ -156,12 +163,14 @@ def optimize(dqn, target_dqn, memory, optimizer):
     # Compute the current estimates of the Q-values for each state-action
     # pair (s,a). Here, torch.gather() is useful for selecting the Q-values
     # corresponding to the chosen actions.
-    q_values = dqn(obs)
+    q_values = dqn(obs.mean(dim=2))
+    if len(q_values.shape) != len(actions.shape):
+        q_values = q_values[:, 0, :]
     q_values = torch.gather(q_values, 1, actions)
 
     # Compute the Q-value targets. Only do this for non-terminal transitions!
     target_q_values = torch.zeros(dqn.batch_size, device=device)
-    target_q_values[non_terminal_mask] = rewards[non_terminal_mask] + target_dqn.gamma * target_dqn(next_obs[non_terminal_mask]).max(1).values
+    target_q_values[non_terminal_mask] = rewards[non_terminal_mask] + target_dqn.gamma * target_dqn(next_obs[non_terminal_mask].mean(dim=2)).max(1).values
     target_q_values[terminal_mask] = rewards[terminal_mask]
     target_q_values = target_q_values.detach()
     # import pdb; pdb.set_trace()
