@@ -32,7 +32,7 @@ class ReplayMemory:
 
 
 class DQN(nn.Module):
-    
+
     def __init__(self, env_config):
         super(DQN, self).__init__()
 
@@ -76,9 +76,9 @@ class DQN(nn.Module):
             action = torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
 
         return action
-    
+
 class ConvDQN(nn.Module):
-    
+
     def __init__(self, env_config):
         super(ConvDQN, self).__init__()
 
@@ -96,11 +96,11 @@ class ConvDQN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
         self.fc1 = nn.Linear(3136, 512)
-        self.fc2 = nn.Linear(512, self.n_actions)
+        self.fc2 = nn.Linear(512, 2) # although in pong there are 6 possible actions only action 2 and 3 are sensible
 
         self.relu = nn.ReLU()
         self.flatten = nn.Flatten()
-        
+
     def forward(self, x):
         """Runs the forward pass of the ConvNet."""
         x = self.relu(self.conv1(x))
@@ -111,7 +111,7 @@ class ConvDQN(nn.Module):
         x = self.fc2(x)
 
         return x
-    
+
     def act(self, observation, exploit=False):
         """Selects an action with an epsilon-greedy exploration strategy."""
         # Calculate the current epsilon
@@ -126,14 +126,10 @@ class ConvDQN(nn.Module):
                 action = self.forward(observation).max(1).indices.view(1, 1)
         else:
             # Apply exploration to the entire batch
-            action = torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
-            
-        # there are 6 actions in Pong, but only action 2 and 3 are valid
-        # so we need to convert the action to 2 or 3
-        action = torch.tensor([[2 + action.item()]], device=device, dtype=torch.long)
+            action = torch.tensor([[random.randrange(2)]], device=device, dtype=torch.long)
 
         return action
-    
+
 
 def optimize(dqn, target_dqn, memory, optimizer):
     """This function samples a batch from the replay buffer and optimizes the Q-network."""

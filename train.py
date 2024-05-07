@@ -59,7 +59,7 @@ if __name__ == '__main__':
         dqn = ConvDQN(env_config=env_config).to(device)
     else:
         dqn = DQN(env_config=env_config).to(device)
-    
+
     # Create and initialize target Q-network.
     if args.env == 'Pong-v5':
         target_dqn = ConvDQN(env_config=env_config).to(device)
@@ -93,20 +93,22 @@ if __name__ == '__main__':
 
             # obs = np.block([previous_screen, current_screen]).ravel()
             obs_stack = torch.cat(args['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
-        
+
         # initialize steps
         steps = 0
-        
+
         while not terminated:
             # get action from dqn
             action = dqn.act(obs, exploit=False)
+            # map action to avaiable options (2 and 3)
+            action_mapped = torch.tensor([[2 + action.item()]], device = device, dtype=torch.long)
 
             # Act in the true environment.
-            next_obs, reward, terminated, truncated, info = env.step(action.item())
-                        
+            next_obs, reward, terminated, truncated, info = env.step(action_mapped.item())
+
             # step counter
             steps += 1
-            
+
             # Preprocess incoming observation.
             if not terminated:
                 next_obs = preprocess(next_obs, env=args.env).unsqueeze(0)
@@ -116,27 +118,27 @@ if __name__ == '__main__':
                     # current_screen = grayscale(env.render())
 
                     # next_obs = np.block([previous_screen, current_screen]).ravel()
-                    next_obs_stack = torch.cat((obs_stack[:, 1:, ...], obs.unsqueeze(1)), dim=1).to(device)
+                    next_obs_stack = torch.cat((obs_stack[:, 1:, ...], next_obs.unsqueeze(1)), dim=1).to(device)
             else:
                 next_obs = None
-                
+
             # Store transition in replay memory and ensure type torch.Tensor.
             if args.using_screen:
                 memory.push(obs_stack, action, next_obs_stack, torch.tensor([reward], device=device))
             else:
                 memory.push(obs, action, next_obs, torch.tensor([reward], device=device))
-            
+
             # Update observation.
             obs = next_obs
-            
+
             # Optimize the DQN.
             if steps % env_config['train_frequency'] == 0:
                 optimize(dqn, target_dqn, memory, optimizer)
-                
+
             # Update target network.
             if steps % env_config['target_update_frequency'] == 0:
                 target_dqn.load_state_dict(dqn.state_dict())
-            
+
         # Evaluate the current agent.
         if episode % args.evaluate_freq == 0:
             mean_return, max_return = evaluate_policy(dqn, env, env_config, args, n_episodes=args.evaluation_episodes)
@@ -151,7 +153,7 @@ if __name__ == '__main__':
 
                 print('Best performance so far! Saving model.')
                 torch.save(dqn, f'models/{args.env}_best.pt')
-        
+
     # Close environment after training is completed.
     env.close()
     plot_learning(mean_performances, max_performances)
