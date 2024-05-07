@@ -127,6 +127,10 @@ class ConvDQN(nn.Module):
         else:
             # Apply exploration to the entire batch
             action = torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
+            
+        # there are 6 actions in Pong, but only action 2 and 3 are valid
+        # so we need to convert the action to 2 or 3
+        action = torch.tensor([[2 + action.item()]], device=device, dtype=torch.long)
 
         return action
     
