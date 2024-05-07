@@ -32,8 +32,6 @@ class ReplayMemory:
 
 
 class DQN(nn.Module):
-
-    # TODO create a convnet for using image input (2*600*400)
     
     def __init__(self, env_config):
         super(DQN, self).__init__()
@@ -78,6 +76,60 @@ class DQN(nn.Module):
             action = torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
 
         return action
+    
+class ConvDQN(nn.Module):
+    
+    def __init__(self, env_config):
+        super(ConvDQN, self).__init__()
+
+        # Save hyperparameters needed in the DQN class.
+        self.n_episodes = env_config['n_episodes']
+        self.batch_size = env_config["batch_size"]
+        self.gamma = env_config["gamma"]
+        self.eps_start = env_config["eps_start"]
+        self.eps_end = env_config["eps_end"]
+        self.steps_annealed = 0
+        self.anneal_length = env_config["anneal_length"]
+        self.n_actions = env_config["n_actions"]
+
+        self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4, padding=0)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
+        self.fc1 = nn.Linear(3136, 512)
+        self.fc2 = nn.Linear(512, self.n_actions)
+
+        self.relu = nn.ReLU()
+        self.flatten = nn.Flatten()
+        
+    def forward(self, x):
+        """Runs the forward pass of the ConvNet."""
+        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
+        x = self.relu(self.conv3(x))
+        x = self.flatten(x)
+        x = self.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        return x
+    
+    def act(self, observation, exploit=False):
+        """Selects an action with an epsilon-greedy exploration strategy."""
+        # Calculate the current epsilon
+        eps_curr = self.eps_end + (self.eps_start - self.eps_end) * (1 - min(1.0, self.steps_annealed / self.anneal_length))
+        self.steps_annealed += 1
+
+        # Disable epsilon-greedy for inference
+        if exploit or random.random() > eps_curr:
+            # Assume self(observation) returns a [batch_size, n_actions] tensor
+            # containing the Q-values for the given observation.
+            with torch.no_grad():
+                action = self.forward(observation).max(1).indices.view(1, 1)
+        else:
+            # Apply exploration to the entire batch
+            action = torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
+
+        return action
+    
 
 def optimize(dqn, target_dqn, memory, optimizer):
     """This function samples a batch from the replay buffer and optimizes the Q-network."""

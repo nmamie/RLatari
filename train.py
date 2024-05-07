@@ -1,13 +1,14 @@
 import argparse
 
 import gymnasium as gym
+from gymnasium.wrappers import AtariPreprocessing
 import torch
 from tqdm import tqdm
 
 import config
 from utils import preprocess, grayscale
 from evaluate import evaluate_policy
-from dqn import DQN, ReplayMemory, optimize
+from dqn import DQN, ConvDQN, ReplayMemory, optimize
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,13 +46,23 @@ if __name__ == '__main__':
 
     # Initialize environment and config.
     env = gym.make(args.env)
+    if args.env == 'Pong-v5':
+        env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30)
+        env = gym.wrappers.FrameStack(env, num_stack=4)
     env_config = ENV_CONFIGS[args.env]
 
     # Initialize deep Q-networks.
-    dqn = DQN(env_config=env_config).to(device)
+    if args.env == 'Pong-v5':
+        dqn = ConvDQN(env_config=env_config).to(device)
+    else:
+        dqn = DQN(env_config=env_config).to(device)
     
     # Create and initialize target Q-network.
-    target_dqn = DQN(env_config=env_config).to(device)
+    if args.env == 'Pong-v5':
+        target_dqn = ConvDQN(env_config=env_config).to(device)
+    else:
+        target_dqn = DQN(env_config=env_config).to(device)
+    # load state dict
     target_dqn.load_state_dict(dqn.state_dict())
 
     # Create replay memory.
@@ -74,10 +85,11 @@ if __name__ == '__main__':
         obs = preprocess(obs, env=args.env).unsqueeze(0)
 
         if args.using_screen:
-            previous_screen = grayscale(env.render())
-            current_screen = grayscale(env.render())
+            # previous_screen = grayscale(env.render())
+            # current_screen = grayscale(env.render())
 
-            obs = np.block([previous_screen, current_screen]).ravel()
+            # obs = np.block([previous_screen, current_screen]).ravel()
+            obs_stack = torch.cat(args['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
         
         # initialize steps
         steps = 0
@@ -97,16 +109,19 @@ if __name__ == '__main__':
                 next_obs = preprocess(next_obs, env=args.env).unsqueeze(0)
 
                 if args.using_screen:
-                    previous_screen = current_screen
-                    current_screen = grayscale(env.render())
+                    # previous_screen = current_screen
+                    # current_screen = grayscale(env.render())
 
-                    next_obs = np.block([previous_screen, current_screen]).ravel()
-
+                    # next_obs = np.block([previous_screen, current_screen]).ravel()
+                    next_obs_stack = torch.cat((obs_stack[:, 1:, ...], obs.unsqueeze(1)), dim=1).to(device)
             else:
                 next_obs = None
                 
             # Store transition in replay memory and ensure type torch.Tensor.
-            memory.push(obs, action, next_obs, torch.tensor([reward], device=device))
+            if args.using_screen:
+                memory.push(obs_stack, action, next_obs_stack, torch.tensor([reward], device=device))
+            else:
+                memory.push(obs, action, next_obs, torch.tensor([reward], device=device))
             
             # Update observation.
             obs = next_obs
