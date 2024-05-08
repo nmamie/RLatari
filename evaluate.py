@@ -54,7 +54,7 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
                 obs, reward, terminated, truncated, info = env.step(action)
             obs = preprocess(obs, env=args.env).unsqueeze(0)
             if args.env == 'Pong-v5':
-                obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0)
+                obs_stack = torch.cat((obs_stack[:, 1:, ...], obs.unsqueeze(1)), dim=1).to(device)
 
             episode_return += reward
 
