@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # Initialize environment and config.
     if args.env == 'Pong-v5':
         env = gym.make('ALE/Pong-v5')
-        env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30)
+        env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30, scale_obs=True)
         env = gym.wrappers.FrameStack(env, num_stack=4)
     else:
         env = gym.make(args.env)
@@ -89,12 +89,12 @@ if __name__ == '__main__':
 
         obs = preprocess(obs, env=args.env).unsqueeze(0)
 
-        if args.using_screen:
-            # previous_screen = grayscale(env.render())
-            # current_screen = grayscale(env.render())
+        # if args.using_screen:
+        #     # previous_screen = grayscale(env.render())
+        #     # current_screen = grayscale(env.render())
 
-            # obs = np.block([previous_screen, current_screen]).ravel()
-            obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
+        #     # obs = np.block([previous_screen, current_screen]).ravel()
+        #     obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0).to(device)
 
         # initialize steps
         steps = 0
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         while not terminated:
             # get action from dqn
             if args.using_screen:
-                action = dqn.act(obs_stack, exploit=False)
+                action = dqn.act(obs, exploit=False)
                 # map action to avaiable options (2 and 3)
                 action_mapped = torch.tensor([[2 + action.item()]], device = device, dtype=torch.long)
                 # Act in the true environment.
@@ -124,15 +124,12 @@ if __name__ == '__main__':
                     # current_screen = grayscale(env.render())
 
                     # next_obs = np.block([previous_screen, current_screen]).ravel()
-                    next_obs_stack = torch.cat((obs_stack[:, 1:, ...], next_obs.unsqueeze(1)), dim=1).to(device)
+                    next_obs = torch.cat((obs[:, 1:, ...], next_obs.unsqueeze(1)), dim=1).to(device)
             else:
                 next_obs = None
 
             # Store transition in replay memory and ensure type torch.Tensor.
-            if args.using_screen:
-                memory.push(obs_stack, action, next_obs_stack, torch.tensor([reward], device=device))
-            else:
-                memory.push(obs, action, next_obs, torch.tensor([reward], device=device))
+            memory.push(obs, action, next_obs, torch.tensor([reward], device=device))
 
             # Update observation.
             obs = next_obs

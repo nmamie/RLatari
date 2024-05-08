@@ -106,8 +106,8 @@ class ConvDQN(nn.Module):
 
     def forward(self, x):
         # Pass the data through the convolutional layers
-        if len(x.shape) > 4:
-            x = x.mean(dim=2)
+        # if len(x.shape) > 4:
+        #     x = x.mean(dim=2)
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
         x = self.relu(self.conv3(x))
@@ -163,14 +163,14 @@ def optimize(dqn, target_dqn, memory, optimizer):
     # Compute the current estimates of the Q-values for each state-action
     # pair (s,a). Here, torch.gather() is useful for selecting the Q-values
     # corresponding to the chosen actions.
-    q_values = dqn(obs.mean(dim=2))
-    if len(q_values.shape) != len(actions.shape):
-        q_values = q_values[:, 0, :]
+    # q_values = dqn(obs.mean(dim=2))
+    # if len(q_values.shape) != len(actions.shape):
+    #     q_values = q_values[:, 0, :]
     q_values = torch.gather(q_values, 1, actions)
 
     # Compute the Q-value targets. Only do this for non-terminal transitions!
     target_q_values = torch.zeros(dqn.batch_size, device=device)
-    target_q_values[non_terminal_mask] = rewards[non_terminal_mask] + target_dqn.gamma * target_dqn(next_obs[non_terminal_mask].mean(dim=2)).max(1).values
+    target_q_values[non_terminal_mask] = rewards[non_terminal_mask] + target_dqn.gamma * target_dqn(next_obs[non_terminal_mask]).max(1).values
     target_q_values[terminal_mask] = rewards[terminal_mask]
     target_q_values = target_q_values.detach()
     # import pdb; pdb.set_trace()
