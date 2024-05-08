@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import gymnasium as gym
 from gymnasium.wrappers import AtariPreprocessing
@@ -39,8 +40,13 @@ def plot_learning(mean_perf, max_perf):
     plt.title("Performance over epochs")
     plt.xlabel("Epoch")
     plt.ylabel("Return")
-    plt.legend()
-    plt.show()
+    
+    # save plot
+    try:
+        plt.savefig(f"training/{args.env}_performance.png")
+    except FileNotFoundError:
+        os.makedirs("training")
+        plt.savefig(f"training/{args.env}_performance.png")
 
 if __name__ == '__main__':
     args = parser.parse_args()
