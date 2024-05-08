@@ -163,7 +163,7 @@ def optimize(dqn, target_dqn, memory, optimizer):
     # Compute the current estimates of the Q-values for each state-action
     # pair (s,a). Here, torch.gather() is useful for selecting the Q-values
     # corresponding to the chosen actions.
-    # q_values = dqn(obs.mean(dim=2))
+    q_values = dqn(obs)
     # if len(q_values.shape) != len(actions.shape):
     #     q_values = q_values[:, 0, :]
     q_values = torch.gather(q_values, 1, actions)
