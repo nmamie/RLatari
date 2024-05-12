@@ -47,7 +47,10 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
 
             if args.env == 'Pong-v5':
                 action = dqn.act(obs_stack, exploit=True)
-                action_mapped = torch.tensor([[2 + action.item()]], dtype = torch.long)
+                if action.item() != 0:
+                    action_mapped = torch.tensor([[1 + action.item()]], dtype = torch.long)
+                else:
+                    action_mapped = action
                 obs, reward, terminated, truncated, info = env.step(action_mapped.item())
             else:
                 action = dqn.act(obs, exploit=True).item()

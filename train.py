@@ -40,7 +40,7 @@ def plot_learning(mean_perf, max_perf):
     plt.title("Performance over epochs")
     plt.xlabel("Epoch")
     plt.ylabel("Return")
-    
+
     # save plot
     try:
         plt.savefig(f"training/{args.env}_performance.png")
@@ -109,8 +109,11 @@ if __name__ == '__main__':
             # get action from dqn
             if args.using_screen:
                 action = dqn.act(obs_stack, exploit=False)
-                # map action to avaiable options (2 and 3)
-                action_mapped = torch.tensor([[2 + action.item()]], device = device, dtype=torch.long)
+                # map action to avaiable options (0, 2 and 3)
+                if action.item() != 0:
+                    action_mapped = torch.tensor([[1 + action.item()]], device = device, dtype=torch.long)
+                else:
+                    action_mapped = action
                 # Act in the true environment.
                 next_obs, reward, terminated, truncated, info = env.step(action_mapped.item())
             else:

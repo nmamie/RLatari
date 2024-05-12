@@ -86,6 +86,7 @@ class ConvDQN(nn.Module):
         self.n_episodes = env_config['n_episodes']
         self.batch_size = env_config["batch_size"]
         self.gamma = env_config["gamma"]
+        self.obs_stack_size = env_config["observation_stack_size"]
         self.eps_start = env_config["eps_start"]
         self.eps_end = env_config["eps_end"]
         self.steps_annealed = 0
@@ -93,12 +94,12 @@ class ConvDQN(nn.Module):
         self.n_actions = env_config["n_actions"]
 
         # Define the convolutional layers
-        self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4, padding=0)
+        self.conv1 = nn.Conv2d(self.obs_stack_size, 32, kernel_size=8, stride=4, padding=0)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
         # Define the fully connected layers
         self.fc1 = nn.Linear(3136, 512)  # Ensure this dimension matches the flattened output of conv3
-        self.fc2 = nn.Linear(512, 2)  # Output layer for two actions
+        self.fc2 = nn.Linear(512, self.n_actions)  # Output layer for six actions
 
         # Activation and flattening helpers
         self.relu = nn.ReLU()

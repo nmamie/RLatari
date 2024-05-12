@@ -50,14 +50,14 @@ MountainCar = {
 AtariPong = {
     'n_episodes': 10000,
     'observation_stack_size': 4,
-    'memory_size': 50000,
+    'memory_size': 20000,
     'batch_size': 32,
-    'target_update_frequency': 1000,
+    'target_update_frequency': 100,
     'train_frequency': 4,
     'gamma': 0.99,
     'lr': 1e-4,
     'eps_start': 1.0,
     'eps_end': 0.01,
     'anneal_length': 10**6,
-    'n_actions': 6,
+    'n_actions': 3,
 }
