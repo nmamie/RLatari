@@ -35,9 +35,6 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
         obs, info = env.reset()
         obs = preprocess(obs, env=args.env).unsqueeze(0)
 
-        if args.env == 'Pong-v5':
-            obs_stack = torch.cat(env_config['observation_stack_size'] * [obs]).unsqueeze(0)
-
         terminated = False
         episode_return = 0
 
@@ -46,7 +43,7 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
                 env.render()
 
             if args.env == 'Pong-v5':
-                action = dqn.act(obs_stack, exploit=True)
+                action = dqn.act(obs, exploit=True)
                 if action.item() != 0:
                     action_mapped = torch.tensor([[1 + action.item()]], dtype = torch.long)
                 else:
@@ -55,10 +52,13 @@ def evaluate_policy(dqn, env, env_config, args, n_episodes, render=False, verbos
             else:
                 action = dqn.act(obs, exploit=True).item()
                 obs, reward, terminated, truncated, info = env.step(action)
-            obs = preprocess(obs, env=args.env).unsqueeze(0)
-            if args.env == 'Pong-v5':
-                obs_stack = torch.cat((obs_stack[:, 1:, ...], obs.unsqueeze(1)), dim=1).to(device)
-
+            
+            # Preprocess incoming observation.
+            if not terminated:
+                obs = preprocess(obs, env=args.env).unsqueeze(0)
+            else:
+                obs = None
+            
             episode_return += reward
 
         total_return += episode_return

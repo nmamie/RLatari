@@ -154,7 +154,7 @@ def optimize(dqn, target_dqn, memory, optimizer):
     # handle terminal transitions (none)
     obs = torch.cat([s for s in sample[0]], dim=0).to(device)
     actions = torch.cat(sample[1], dim=0).to(device)
-    next_obs = torch.cat([s if s is not None else torch.zeros_like(obs[0]).reshape(1, -1) for s in sample[2]], dim=0).to(device)
+    next_obs = torch.cat([s if s is not None else torch.zeros_like(sample[0][0]) for s in sample[2]], dim=0).to(device)
     rewards = torch.cat(sample[3], dim=0).to(device)
 
     non_terminal_mask = torch.tensor([s is not None for s in sample[2]], device=device, dtype=torch.bool)
