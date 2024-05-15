@@ -35,6 +35,7 @@ def plot_learning(mean_perf, max_perf):
 
     plt.plot(epochs, mean_perf, label="Mean returns")
     plt.plot(epochs, max_perf, label ="Max returns")
+    plt.legend()
 
     plt.title("Performance over epochs")
     plt.xlabel("Epoch")
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     env_config = ENV_CONFIGS[args.env]
 
     if args.env == 'Pong-v5':
-        env = gym.make('ALE/Pong-v5')
+        env = gym.make('ALE/Pong-v5') # Already has a frameskip of 4
         env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30)
         env = gym.wrappers.FrameStack(env, num_stack=env_config['observation_stack_size'])
     else:
