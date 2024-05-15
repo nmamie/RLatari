@@ -10,6 +10,7 @@ def preprocess(obs, env):
     elif env in ['MountainCar-v0']:
         return torch.tensor(obs, device=device).float()
     elif env in ['Pong-v5']:
+        obs = np.array(obs)
         return torch.tensor(obs, device=device).float()
     else:
         raise ValueError('Please add necessary observation preprocessing instructions to preprocess() in utils.py.')
