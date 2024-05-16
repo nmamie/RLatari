@@ -61,3 +61,19 @@ AtariPong = {
     'anneal_length': 10**6,
     'n_actions': 3,
 }
+
+# Hyperparameters for Breakout-v0
+AtariBreakout = {
+    'n_episodes': 10000,
+    'observation_stack_size': 4,
+    'memory_size': 20000,
+    'batch_size': 32,
+    'target_update_frequency': 100,
+    'train_frequency': 4,
+    'gamma': 0.99,
+    'lr': 0.00025,
+    'eps_start': 1.0,
+    'eps_end': 0.1,
+    'anneal_length': 10**6,
+    'n_actions': 3,
+}

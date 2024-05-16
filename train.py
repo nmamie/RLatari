@@ -18,7 +18,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--env', choices=['CartPole-v1', 'MountainCar-v0', 'Pong-v5'], default='CartPole-v1')
+parser.add_argument('--env', choices=['CartPole-v1', 'MountainCar-v0', 'Pong-v5', 'Breakout-v5'], default='CartPole-v1')
 parser.add_argument('--evaluate_freq', type=int, default=25, help='How often to run evaluation.', nargs='?')
 parser.add_argument('--evaluation_episodes', type=int, default=5, help='Number of evaluation episodes.', nargs='?')
 
@@ -27,6 +27,7 @@ ENV_CONFIGS = {
     'CartPole-v1': config.CartPole,
     'MountainCar-v0': config.MountainCar,
     'Pong-v5': config.AtariPong,
+    'Breakout-v5': config.AtariBreakout,
 }
 
 def plot_learning(mean_perf, max_perf):
@@ -54,8 +55,8 @@ if __name__ == '__main__':
     # Initialize environment and config.
     env_config = ENV_CONFIGS[args.env]
 
-    if args.env == 'Pong-v5':
-        env = gym.make('ALE/Pong-v5') # Already has a frameskip of 4
+    if args.env in ['Pong-v5', 'Breakout-v5']:
+        env = gym.make('ALE/' + args.env, full_action_space=False) # Already has a frameskip of 4
         env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=1, noop_max=30)
         env = gym.wrappers.FrameStack(env, num_stack=env_config['observation_stack_size'])
     else:
@@ -63,13 +64,13 @@ if __name__ == '__main__':
 
 
     # Initialize deep Q-networks.
-    if args.env == 'Pong-v5':
+    if args.env in ['Pong-v5', 'Breakout-v5']:
         dqn = ConvDQN(env_config=env_config).to(device)
     else:
         dqn = DQN(env_config=env_config).to(device)
 
     # Create and initialize target Q-network.
-    if args.env == 'Pong-v5':
+    if args.env in ['Pong-v5', 'Breakout-v5']:
         target_dqn = ConvDQN(env_config=env_config).to(device)
     else:
         target_dqn = DQN(env_config=env_config).to(device)
@@ -102,7 +103,7 @@ if __name__ == '__main__':
 
         while not terminated:
             # get action from dqn
-            if args.env == 'Pong-v5':
+            if args.env in ['Pong-v5', 'Breakout-v5']:
                 action = dqn.act(obs, exploit=False)
                 # map action to avaiable options (0, 2 and 3)
                 if action.item() != 0:

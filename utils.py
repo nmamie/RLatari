@@ -9,7 +9,7 @@ def preprocess(obs, env):
         return torch.tensor(obs, device=device).float()
     elif env in ['MountainCar-v0']:
         return torch.tensor(obs, device=device).float()
-    elif env in ['Pong-v5']:
+    elif env in ['Pong-v5', 'Breakout-v5']:
         obs = np.array(obs)
         return torch.tensor(obs, device=device).float()
     else:
